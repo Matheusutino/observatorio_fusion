@@ -20,7 +20,11 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 sys.path.insert(0, ROOT_DIR)
 
 from src.core.config.config import get_results_dir, LABELS
-from src.core.visualization.plots import plot_histories, plot_tsne_representation
+from src.core.visualization.plots import (
+    plot_histories,
+    plot_tsne_representation,
+    plot_tsne_embeddings,
+)
 
 
 def load_experiment_results(model_name: str) -> dict:
@@ -95,8 +99,15 @@ def main():
     parser.add_argument(
         "model_name",
         type=str,
-        choices=["encoder", "autoencoder"],
-        help="Name of the model (encoder or autoencoder)",
+        choices=[
+            "encoder",
+            "autoencoder",
+            "vae",
+            "encoder_fusion_inside",
+            "autoencoder_fusion_inside",
+            "vae_fusion_inside",
+        ],
+        help="Name of the model to visualize",
     )
     parser.add_argument(
         "--phase",
@@ -145,11 +156,21 @@ def main():
         print("\nPlotting training histories (Phase 2)...")
         plot_histories(histories_p2, model_name=model_name.capitalize())
 
-    # t-SNE das representações (fase 1 + fase 2)
+    # t-SNE das representações (fase 1 + fase 2 + phase3 forms)
     if args.phase == "all" or args.phase == "phase1":
-        print("\nGenerating t-SNE visualizations...")
-        all_repr = {**repr_p1, **repr_p2}
-        plot_tsne_representation(all_repr, y, le, model_name=model_name.capitalize())
+        results_dir = get_results_dir(model_name)
+        tsne_path = os.path.join(results_dir, f"{model_name}_tsne_embeddings.npz")
+        if os.path.exists(tsne_path):
+            print("\nLoading precomputed t-SNE embeddings...")
+            tsne_embeddings = dict(np.load(tsne_path))
+            plot_tsne_embeddings(tsne_embeddings, y, le, model_name=model_name.capitalize())
+        else:
+            print("\nGenerating t-SNE visualizations...")
+            all_repr = {**repr_p1, **repr_p2}
+            # include phase3 representation forms if present
+            repr_p3 = {k: v for k, v in representations.items() if "|" in k}
+            all_repr.update(repr_p3)
+            plot_tsne_representation(all_repr, y, le, model_name=model_name.capitalize())
 
     print("\n" + "="*55)
     print("VISUALIZATIONS COMPLETED!")

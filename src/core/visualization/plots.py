@@ -10,6 +10,103 @@ from sklearn.preprocessing import LabelEncoder
 from ..config.config import RANDOM_STATE, get_results_dir
 
 
+def save_tsne_embeddings(
+    repr_dict: dict,
+    model_name: str = "Encoder",
+    perplexity: int = 40,
+) -> str:
+    """
+    Calcula e salva embeddings t-SNE pré-computadas para todas as representações.
+
+    Retorna o caminho do arquivo salvo.
+    """
+    tsne_embeddings = {}
+    for name, Z in repr_dict.items():
+        print(f"  Precomputing t-SNE for [{name}] ({Z.shape[0]} × {Z.shape[1]})...")
+        tsne = TSNE(n_components=2, perplexity=perplexity, random_state=RANDOM_STATE)
+        tsne_embeddings[name] = tsne.fit_transform(Z)
+
+    results_dir = get_results_dir(model_name)
+    os.makedirs(results_dir, exist_ok=True)
+    save_path = os.path.join(results_dir, f"{model_name.lower()}_tsne_embeddings.npz")
+    np.savez_compressed(save_path, **tsne_embeddings)
+    print(f"  Precomputed t-SNE saved: {save_path}")
+    return save_path
+
+
+def plot_tsne_embeddings(
+    tsne_dict: dict,
+    y_all: np.ndarray,
+    le: LabelEncoder,
+    model_name: str = "Encoder",
+) -> None:
+    """
+    Plota representações t-SNE já pré-computadas.
+    """
+    # Tradução dos labels
+    label_translation = {"ALTA": "High", "BAIXA": "Low"}
+    colors = {"ALTA": "#2ecc71", "BAIXA": "#e74c3c"}
+
+    fusion_methods = {}
+    representation_forms = {}
+    for name, Z in tsne_dict.items():
+        if "|" in name:
+            representation_forms[name] = Z
+        else:
+            fusion_methods[name] = Z
+
+    def plot_grid(plot_dict: dict, title_fmt: str, filename: str, n_cols: int):
+        if not plot_dict:
+            return
+        n_items = len(plot_dict)
+        n_rows = (n_items + n_cols - 1) // n_cols
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
+        axes = axes.flatten() if n_rows > 1 else [axes] if n_items == 1 else axes
+
+        for idx, (name, Z_2d) in enumerate(plot_dict.items()):
+            ax = axes[idx]
+            for cls_idx, lbl in enumerate(le.classes_):
+                mask = y_all == cls_idx
+                ax.scatter(
+                    Z_2d[mask, 0],
+                    Z_2d[mask, 1],
+                    c=colors[lbl],
+                    s=12,
+                    alpha=0.6,
+                    linewidths=0,
+                    label=label_translation[lbl],
+                )
+            ax.set_title(name, fontsize=12)
+            ax.set_xlabel("t-SNE 1")
+            ax.set_ylabel("t-SNE 2")
+            ax.legend(markerscale=2, fontsize=9)
+
+        for idx in range(n_items, len(axes)):
+            axes[idx].axis("off")
+
+        fig.suptitle(title_fmt, fontsize=14)
+        plt.tight_layout()
+        results_dir = get_results_dir(model_name)
+        os.makedirs(results_dir, exist_ok=True)
+        save_path = os.path.join(results_dir, filename)
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"  Figure saved: {save_path}")
+
+    plot_grid(
+        fusion_methods,
+        f"t-SNE — {model_name} Fusion Methods (complete dataset)",
+        f"{model_name.lower()}_tsne_fusion_methods.png",
+        n_cols=5,
+    )
+    plot_grid(
+        representation_forms,
+        f"t-SNE — {model_name} Representation Forms (complete dataset)",
+        f"{model_name.lower()}_tsne_representation_forms.png",
+        n_cols=3,
+    )
+
+
 def plot_histories(
     histories: dict, model_name: str = "Encoder", window_size: int = 5, top_k: int = 3
 ) -> None:

@@ -35,6 +35,7 @@ from src.core.experiments.phases_autoencoder_fusion_inside import (
     run_phase2_fusion_inside,
     run_phase3_fusion_inside,
 )
+from src.core.visualization.plots import save_tsne_embeddings
 
 
 # ===========================================================================
@@ -172,6 +173,8 @@ def main():
     repr_path = os.path.join(results_dir, f"{model_name}_representations.npz")
     np.savez_compressed(repr_path, **all_repr)
     print(f"  Representations saved: {repr_path}")
+
+    save_tsne_embeddings(all_repr, model_name=model_name)
 
     # Salva labels
     labels_path = os.path.join(results_dir, "labels.npz")
