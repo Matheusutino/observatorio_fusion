@@ -1,0 +1,14 @@
+# Core dependencies
+numpy
+pandas
+torch
+scikit-learn
+
+# Embeddings
+sentence-transformers
+
+# Visualization
+matplotlib
+
+# Data format
+pyarrow
