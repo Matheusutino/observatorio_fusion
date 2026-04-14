@@ -1,5 +1,5 @@
 """
-Configurações centralizadas do projeto.
+Centralized project configuration.
 """
 import os
 import random
@@ -21,30 +21,30 @@ BASE_RESULTS_DIR = "results"
 
 def get_results_dir(model_name: str) -> str:
     """
-    Retorna o diretório de resultados específico para um modelo.
+    Returns the results directory for a given model.
 
-    Parâmetros
+    Parameters
     ----------
     model_name : str
-        Nome do modelo (ex: "encoder", "autoencoder").
+        Name of the model (e.g. "encoder", "autoencoder").
 
-    Retorna
+    Returns
     -------
     str
-        Caminho para o diretório de resultados (ex: "results/encoder").
+        Path to the results directory (e.g. "results/encoder").
     """
     return os.path.join(BASE_RESULTS_DIR, model_name.lower())
 
 
 # ===========================================================================
-# MODELO DE EMBEDDINGS
+# EMBEDDING MODEL
 # ===========================================================================
 
 SBERT_MODEL = "ibm-granite/granite-embedding-278m-multilingual"
 
 
 # ===========================================================================
-# RÓTULOS E RANDOM STATE
+# LABELS AND RANDOM STATE
 # ===========================================================================
 
 RANDOM_STATE = 42
@@ -52,51 +52,51 @@ LABELS = ["ALTA", "BAIXA"]
 
 
 # ===========================================================================
-# ARQUITETURA DO ENCODER
+# ENCODER ARCHITECTURE
 # ===========================================================================
 
-HIDDEN_DIMS = [512, 256, 128]  # camadas ocultas
+HIDDEN_DIMS = [512, 256, 128]  # hidden layers
 DROPOUT = 0.3
 
 
 # ===========================================================================
-# ARQUITETURA DO AUTOENCODER E VAE
+# AUTOENCODER AND VAE ARCHITECTURE
 # ===========================================================================
 
-LATENT_DIM = 128  # dimensão do espaço latente
+LATENT_DIM = 128  # latent space dimension
 
-# Pesos das losses (independentes)
-LAMBDA_CLASS = 1.0  # peso da loss de classificação
-LAMBDA_RECON = 1.0  # peso da loss de reconstrução
-BETA = 1.0  # peso da KL divergence (apenas para VAE)
+# Loss weights (independent)
+LAMBDA_CLASS = 1.0  # classification loss weight
+LAMBDA_RECON = 1.0  # reconstruction loss weight
+BETA = 1.0  # KL divergence weight (VAE only)
 
 
 # ===========================================================================
-# HIPERPARÂMETROS DE TREINO
+# TRAINING HYPERPARAMETERS
 # ===========================================================================
 
 BATCH_SIZE = 256
 EPOCHS = 200
 LR = 1e-3
 WEIGHT_DECAY = 1e-4
-EARLY_STOP_PATIENCE = 30  # épocas sem melhora no F1-macro val
+EARLY_STOP_PATIENCE = 30  # epochs without improvement in validation F1-macro
 
 
 # ===========================================================================
-# VALIDAÇÃO
+# VALIDATION
 # ===========================================================================
 
-N_FOLDS = 5  # Número de folds para validação cruzada estratificada
+N_FOLDS = 5  # number of folds for stratified cross-validation
 
 
 # ===========================================================================
-# CONFIGURAÇÕES DE FUSÃO
+# FUSION CONFIGURATION
 # ===========================================================================
 
-# Número de melhores operadores a combinar na Fase 2
+# Number of top operators to combine in Phase 2
 TOP_K = 3
 
-# Configurações de fonte textual para ablação (Fase 3)
+# Text source configurations for ablation (Phase 3)
 SOURCE_CONFIGS = [
     ("titulo", "nome"),
     ("titulo", "nome_keywords"),
@@ -109,16 +109,16 @@ SOURCE_CONFIGS = [
     ("resumo_abstract", "nome"),
     ("resumo_abstract", "nome_keywords"),
     ("titulo_resumo_abstract", "nome"),
-    ("titulo_resumo_abstract", "nome_keywords"),  # linha de base
+    ("titulo_resumo_abstract", "nome_keywords"),  # baseline
 ]
 
 
 # ===========================================================================
-# INICIALIZAÇÃO DE SEEDS E DEVICE
+# SEEDS AND DEVICE INITIALIZATION
 # ===========================================================================
 
 def setup_environment():
-    """Inicializa seeds e configura device."""
+    """Initialize seeds and configure the device."""
     random.seed(RANDOM_STATE)
     np.random.seed(RANDOM_STATE)
     torch.manual_seed(RANDOM_STATE)

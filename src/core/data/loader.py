@@ -1,5 +1,5 @@
 """
-Funções de carregamento de dados e geração/cache de embeddings.
+Data loading and embedding generation/cache utilities.
 """
 import os
 import numpy as np
@@ -15,8 +15,8 @@ from ..config.config import (
 
 def load_data() -> pd.DataFrame:
     """
-    Carrega o dataset a partir do parquet, realiza preprocessamento básico
-    e cria a variável alvo 'nivel_binario' (ALTA/BAIXA).
+    Load the dataset from parquet, perform basic preprocessing,
+    and create the target variable 'nivel_binario' (ALTA/BAIXA).
     """
     df = pd.read_parquet(DATA_PATH)
     df = df.dropna(subset=["modelo_nivel", "descricao_resumo", "tema"])
@@ -30,7 +30,7 @@ def load_data() -> pd.DataFrame:
 
 
 def _kw_to_str(series: pd.Series) -> pd.Series:
-    """Converte lista de keywords em string concatenada."""
+    """Convert a list of keywords into a concatenated string."""
     return series.apply(
         lambda x: " ".join(x) if isinstance(x, (list, np.ndarray)) else (x or "")
     )
@@ -38,7 +38,7 @@ def _kw_to_str(series: pd.Series) -> pd.Series:
 
 def get_embeddings(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
     """
-    Retorna embeddings da configuração padrão (titulo_resumo_abstract, nome_keywords).
+    Return embeddings for the default configuration (titulo_resumo_abstract, nome_keywords).
     """
     return get_embeddings_for_config(df, "titulo_resumo_abstract", "nome_keywords")
 
@@ -47,21 +47,21 @@ def get_embeddings_for_config(
     df: pd.DataFrame, prod_cfg: str, tema_cfg: str
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Carrega ou gera embeddings para uma configuração de fonte específica.
+    Load or generate embeddings for a specific source configuration.
 
-    Parâmetros
+    Parameters
     ----------
     df : pd.DataFrame
-        DataFrame com os dados.
+        DataFrame containing the data.
     prod_cfg : str
-        Configuração da produção: "titulo" | "resumo" | "abstract" | "keywords" | "resumo_abstract" | "titulo_resumo_abstract"
+        Production source configuration: "titulo" | "resumo" | "abstract" | "keywords" | "resumo_abstract" | "titulo_resumo_abstract"
     tema_cfg : str
-        Configuração do tema: "nome" | "nome_keywords"
+        Theme source configuration: "nome" | "nome_keywords"
 
-    Retorna
+    Returns
     -------
     tuple[np.ndarray, np.ndarray]
-        (emb_prod, emb_tema) - embeddings normalizados em float32.
+        (emb_prod, emb_tema) - normalized embeddings in float32.
     """
     os.makedirs(EMBEDDINGS_DIR, exist_ok=True)
     cache_path = os.path.join(
@@ -75,7 +75,7 @@ def get_embeddings_for_config(
             np.float32
         )
 
-    print(f"  Gerando embeddings [{prod_cfg} | {tema_cfg}]...")
+    print(f"  Generating embeddings [{prod_cfg} | {tema_cfg}]...")
     sbert = SentenceTransformer(SBERT_MODEL)
 
     kw_prod = _kw_to_str(df["descricao_palavra_chave"])
@@ -115,5 +115,5 @@ def get_embeddings_for_config(
     ).astype(np.float32)
 
     np.savez_compressed(cache_path, emb_prod=emb_prod, emb_tema=emb_tema)
-    print(f"  Salvo: {cache_path}")
+    print(f"  Saved: {cache_path}")
     return emb_prod, emb_tema

@@ -1,17 +1,30 @@
-"""
-Operadores de fusão de embeddings e funções auxiliares.
+"""Embedding fusion operators and helper functions.
 """
 import numpy as np
 import torch
 
 
 def _is_torch_tensor(x) -> bool:
-    """Indica se a entrada é um tensor do PyTorch."""
+    """Check whether the input is a PyTorch tensor.
+
+    Args:
+        x: Input object.
+
+    Returns:
+        True if x is a torch.Tensor, otherwise False.
+    """
     return isinstance(x, torch.Tensor)
 
 
 def _concat(parts):
-    """Concatena arrays/tensores preservando o backend."""
+    """Concatenate arrays or tensors preserving the backend.
+
+    Args:
+        parts: List of numpy arrays or torch tensors.
+
+    Returns:
+        Concatenated array or tensor along dimension 1.
+    """
     first = parts[0]
     if _is_torch_tensor(first):
         return torch.cat(parts, dim=1)
@@ -19,7 +32,15 @@ def _concat(parts):
 
 
 def _geo_mean(u, v):
-    """Média geométrica elemento a elemento."""
+    """Compute elementwise geometric mean.
+
+    Args:
+        u: First tensor or array.
+        v: Second tensor or array.
+
+    Returns:
+        Elementwise geometric mean of u and v.
+    """
     p = u * v
     if _is_torch_tensor(p):
         return torch.sign(p) * torch.abs(p).pow(0.5)
@@ -27,7 +48,15 @@ def _geo_mean(u, v):
 
 
 def _v_ortho(u, v):
-    """Componente ortogonal de v em relação a u."""
+    """Compute the component of v orthogonal to u.
+
+    Args:
+        u: First tensor or array.
+        v: Second tensor or array.
+
+    Returns:
+        The orthogonal component of v relative to u.
+    """
     if _is_torch_tensor(u):
         dot = (u * v).sum(dim=1, keepdim=True)
     else:
@@ -36,7 +65,18 @@ def _v_ortho(u, v):
 
 
 def _sigmoid_weighted(u, v, beta=5.0):
-    """Ponderação sigmóide baseada na similaridade de cosseno."""
+    """Compute a sigmoid-weighted combination of u and v.
+
+    The weight is based on cosine similarity.
+
+    Args:
+        u: First tensor or array.
+        v: Second tensor or array.
+        beta: Sigmoid sharpness parameter.
+
+    Returns:
+        Weighted combination of u and v.
+    """
     if _is_torch_tensor(u):
         cos = (u * v).sum(dim=1, keepdim=True)
         alpha = torch.sigmoid(beta * cos)
@@ -46,7 +86,7 @@ def _sigmoid_weighted(u, v, beta=5.0):
     return alpha * u + (1.0 - alpha) * v
 
 
-# Dicionário com todos os operadores de fusão disponíveis
+# Dictionary with all available fusion operators
 FUSION_OPS = {
     "sum": lambda u, v: u + v,
     "average": lambda u, v: (u + v) / 2,
@@ -61,23 +101,16 @@ FUSION_OPS = {
 }
 
 
-def apply_fusion(emb_prod: np.ndarray, emb_tema: np.ndarray, op_names: list[str]) -> np.ndarray:
-    """
-    Aplica um ou mais operadores de fusão e concatena os resultados.
+def apply_fusion(emb_prod: np.ndarray, emb_topic: np.ndarray, op_names: list[str]) -> np.ndarray:
+    """Apply fusion operators and concatenate results.
 
-    Parâmetros
-    ----------
-    emb_prod : np.ndarray
-        Embeddings da produção (N, D).
-    emb_tema : np.ndarray
-        Embeddings do tema (N, D).
-    op_names : list[str]
-        Lista de nomes de operadores a serem aplicados.
+    Args:
+        emb_prod: Input embeddings for production (N, D).
+    emb_topic: Input embeddings for topic (N, D).
+        op_names: List of fusion operator names to apply.
 
-    Retorna
-    -------
-    np.ndarray
-        Embedding fusionado. Se múltiplos operadores, concatena os resultados.
+    Returns:
+        Fused embedding. If multiple operators are provided, the outputs are concatenated.
     """
-    parts = [FUSION_OPS[op](emb_prod, emb_tema) for op in op_names]
+    parts = [FUSION_OPS[op](emb_prod, emb_topic) for op in op_names]
     return _concat(parts) if len(parts) > 1 else parts[0]

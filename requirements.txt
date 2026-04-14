@@ -9,6 +9,7 @@ sentence-transformers
 
 # Visualization
 matplotlib
+umap-learn
 
 # Data format
 pyarrow
