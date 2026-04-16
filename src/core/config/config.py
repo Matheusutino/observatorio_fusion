@@ -87,6 +87,7 @@ EARLY_STOP_PATIENCE = 30  # epochs without improvement in validation F1-macro
 # ===========================================================================
 
 N_FOLDS = 5  # number of folds for stratified cross-validation
+INNER_VAL_RATIO = 0.10  # fraction of each training fold reserved for early stopping
 
 
 # ===========================================================================
@@ -106,10 +107,12 @@ SOURCE_CONFIGS = [
     ("abstract", "nome_keywords"),
     ("keywords", "nome"),
     ("keywords", "nome_keywords"),
-    ("resumo_abstract", "nome"),
-    ("resumo_abstract", "nome_keywords"),
+    ("titulo_abstract", "nome"),
+    ("titulo_abstract", "nome_keywords"),
     ("titulo_resumo_abstract", "nome"),
     ("titulo_resumo_abstract", "nome_keywords"),  # baseline
+    ("titulo_resumo_abstract_keywords", "nome"),
+    ("titulo_resumo_abstract_keywords", "nome_keywords"),
 ]
 
 

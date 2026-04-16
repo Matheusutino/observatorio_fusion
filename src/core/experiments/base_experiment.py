@@ -7,12 +7,13 @@ from collections.abc import Callable
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 
 from ..config.config import (
     DEVICE,
     EARLY_STOP_PATIENCE,
     EPOCHS,
+    INNER_VAL_RATIO,
     LR,
     N_FOLDS,
     RANDOM_STATE,
@@ -37,7 +38,7 @@ def run_cv_experiment(
     trainer_kwargs: dict | None = None,
     train_verbose: bool = False,
 ) -> dict:
-    """Executa um experimento com StratifiedKFold e agrega os resultados."""
+    """Executa um experimento com CV estratificada e validação interna."""
     print(f"\n{'=' * 55}")
     print(f"FUSION: {label} (CV with {N_FOLDS} folds)")
     print("=" * 55)
@@ -51,14 +52,30 @@ def run_cv_experiment(
     last_representation = None
     trainer_kwargs = trainer_kwargs or {}
 
-    for fold_idx, (train_idx, val_idx) in enumerate(skf.split(idx_all, y)):
+    for fold_idx, (train_idx, test_idx) in enumerate(skf.split(idx_all, y)):
         print(f"\n  Fold {fold_idx + 1}/{N_FOLDS}")
+
+        train_inner_idx, val_inner_idx = train_test_split(
+            train_idx,
+            test_size=INNER_VAL_RATIO,
+            shuffle=True,
+            stratify=y[train_idx],
+            random_state=RANDOM_STATE + fold_idx,
+        )
+
+        print(
+            "    Split sizes: "
+            f"train={len(train_inner_idx)} | "
+            f"val={len(val_inner_idx)} | "
+            f"test={len(test_idx)}"
+        )
 
         generator = torch.Generator()
         generator.manual_seed(RANDOM_STATE + fold_idx)
 
-        loader_train = loader_builder(train_idx, True, generator)
-        loader_val = loader_builder(val_idx, False, None)
+        loader_train = loader_builder(train_inner_idx, True, generator)
+        loader_val = loader_builder(val_inner_idx, False, None)
+        loader_test = loader_builder(test_idx, False, None)
 
         model = model_builder().to(DEVICE)
 
@@ -79,7 +96,7 @@ def run_cv_experiment(
         )
         histories.append(history)
 
-        y_true, y_pred = prediction_extractor(trainer.eval_epoch(loader_val))
+        y_true, y_pred = prediction_extractor(trainer.eval_epoch(loader_test))
         metrics = compute_metrics(y_true, y_pred)
 
         fold_results.append(

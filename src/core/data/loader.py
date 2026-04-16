@@ -78,20 +78,20 @@ def get_embeddings_for_config(
     print(f"  Generating embeddings [{prod_cfg} | {tema_cfg}]...")
     sbert = SentenceTransformer(SBERT_MODEL)
 
+    titulo = df["nome_producao"].fillna("")
+    resumo = df["descricao_resumo"].fillna("")
+    abstract = df["descricao_abstract"].fillna("")
     kw_prod = _kw_to_str(df["descricao_palavra_chave"])
+
     prod_map = {
-        "titulo": df["nome_producao"].fillna(""),
-        "resumo": df["descricao_resumo"].fillna(""),
-        "abstract": df["descricao_abstract"].fillna(""),
+        "titulo": titulo,
+        "resumo": resumo,
+        "abstract": abstract,
         "keywords": kw_prod,
-        "resumo_abstract": df["descricao_resumo"].fillna("")
-        + " "
-        + df["descricao_abstract"].fillna(""),
-        "titulo_resumo_abstract": df["nome_producao"].fillna("")
-        + " "
-        + df["descricao_resumo"].fillna("")
-        + " "
-        + df["descricao_abstract"].fillna(""),
+        "titulo_abstract": titulo + " " + abstract,
+        "resumo_abstract": resumo + " " + abstract,
+        "titulo_resumo_abstract": titulo + " " + resumo + " " + abstract,
+        "titulo_resumo_abstract_keywords": titulo + " " + resumo + " " + abstract + " " + kw_prod,
     }
 
     kw_tema = _kw_to_str(df["palavras_chave"])
@@ -99,6 +99,18 @@ def get_embeddings_for_config(
         "nome": df["tema"].fillna(""),
         "nome_keywords": df["tema"].fillna("") + " " + kw_tema,
     }
+
+    if prod_cfg not in prod_map:
+        available_prod = ", ".join(sorted(prod_map))
+        raise ValueError(
+            f"Unknown prod_cfg '{prod_cfg}'. Available options: {available_prod}"
+        )
+
+    if tema_cfg not in tema_map:
+        available_tema = ", ".join(sorted(tema_map))
+        raise ValueError(
+            f"Unknown tema_cfg '{tema_cfg}'. Available options: {available_tema}"
+        )
 
     emb_prod = sbert.encode(
         prod_map[prod_cfg].tolist(),

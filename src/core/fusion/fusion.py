@@ -31,20 +31,24 @@ def _concat(parts):
     return np.hstack(parts)
 
 
-def _geo_mean(u, v):
-    """Compute elementwise geometric mean.
+def gated_symmetric(u, v):
+    """Compute gated symmetric combination.
 
     Args:
         u: First tensor or array.
         v: Second tensor or array.
 
     Returns:
-        Elementwise geometric mean of u and v.
+        Gated symmetric combination of u and v.
     """
-    p = u * v
-    if _is_torch_tensor(p):
-        return torch.sign(p) * torch.abs(p).pow(0.5)
-    return np.sign(p) * np.abs(p) ** 0.5
+    if _is_torch_tensor(u):
+        gate_u = torch.sigmoid(u)
+        gate_v = torch.sigmoid(v)
+    else:
+        gate_u = 1.0 / (1.0 + np.exp(-u))
+        gate_v = 1.0 / (1.0 + np.exp(-v))
+
+    return u * gate_v + v * gate_u
 
 
 def _v_ortho(u, v):
@@ -58,10 +62,12 @@ def _v_ortho(u, v):
         The orthogonal component of v relative to u.
     """
     if _is_torch_tensor(u):
+        u_norm_sq = (u * u).sum(dim=1, keepdim=True) + 1e-8
         dot = (u * v).sum(dim=1, keepdim=True)
     else:
+        u_norm_sq = (u * u).sum(axis=1, keepdims=True) + 1e-8
         dot = (u * v).sum(axis=1, keepdims=True)
-    return v - dot * u
+    return v - (dot / u_norm_sq) * u
 
 
 def _sigmoid_weighted(u, v, beta=5.0):
@@ -78,10 +84,16 @@ def _sigmoid_weighted(u, v, beta=5.0):
         Weighted combination of u and v.
     """
     if _is_torch_tensor(u):
-        cos = (u * v).sum(dim=1, keepdim=True)
+        u_norm = torch.sqrt((u * u).sum(dim=1, keepdim=True) + 1e-8)
+        v_norm = torch.sqrt((v * v).sum(dim=1, keepdim=True) + 1e-8)
+        dot = (u * v).sum(dim=1, keepdim=True)
+        cos = dot / (u_norm * v_norm)
         alpha = torch.sigmoid(beta * cos)
     else:
-        cos = (u * v).sum(axis=1, keepdims=True)
+        u_norm = np.sqrt((u * u).sum(axis=1, keepdims=True) + 1e-8)
+        v_norm = np.sqrt((v * v).sum(axis=1, keepdims=True) + 1e-8)
+        dot = (u * v).sum(axis=1, keepdims=True)
+        cos = dot / (u_norm * v_norm)
         alpha = 1.0 / (1.0 + np.exp(-beta * cos))
     return alpha * u + (1.0 - alpha) * v
 
@@ -95,7 +107,7 @@ FUSION_OPS = {
     "hadamard": lambda u, v: u * v,
     "max": lambda u, v: torch.maximum(u, v) if _is_torch_tensor(u) else np.maximum(u, v),
     "min": lambda u, v: torch.minimum(u, v) if _is_torch_tensor(u) else np.minimum(u, v),
-    "geo_mean": _geo_mean,
+    "gated_symmetric": gated_symmetric,
     "v_ortho": _v_ortho,
     "sigmoid_weighted": _sigmoid_weighted,
 }
